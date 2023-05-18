@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Register</title>
 </head>
 <body>
-    <form action="{% url 'login' %}" method="post">
+    <form action="{% url 'register' %}" method="post">
         {{ form }}
         {% csrf_token %}
         <button type="submit" class="btn btn-success">submit</button>
