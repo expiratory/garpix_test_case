@@ -1,8 +1,4 @@
 from django.shortcuts import render, redirect
-
-# Create your views here.
-from rest_framework import serializers
-
 from .models import Photo
 
 
@@ -34,7 +30,7 @@ def add_photo(request):
             user = request.user
             data = request.POST
             image = request.FILES.get('image')
-            photo = Photo.objects.create(
+            Photo.objects.create(
                 title=data['title'],
                 description=data['description'],
                 image=image,
