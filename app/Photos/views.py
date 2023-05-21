@@ -24,12 +24,20 @@ def add_photo(request):
     if request.method == 'POST':
         data = request.POST
         image = request.FILES.get('image')
-
         photo = Photo.objects.create(
             title=data['title'],
             description=data['description'],
             image=image
         )
         return redirect('gallery')
-
     return render(request, 'photos/add.html')
+
+
+def change_photos_name(request, pk):
+    photo = Photo.objects.get(id=pk)
+    if request.method == 'POST':
+        data = request.POST
+        photo.title = data['title']
+        photo.save()
+        return redirect('gallery')
+    return render(request, 'photos/change_photos_name.html')
