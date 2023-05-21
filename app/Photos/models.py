@@ -1,8 +1,16 @@
+"""
+here are models for Photos app
+"""
+
+
 from django.contrib.auth.models import User
 from django.db import models
 
 
 class Photo(models.Model):
+    """
+    model Photo in db
+    """
     title = models.CharField(max_length=256, null=False, blank=False)
     description = models.CharField(max_length=512, default='')
     count_of_views = models.PositiveIntegerField(default=0, editable=False)

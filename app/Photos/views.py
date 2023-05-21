@@ -1,20 +1,36 @@
+"""
+Views for Photos
+"""
+
 from django.shortcuts import render, redirect
 from .models import Photo
 
 
 def gallery(request):
+    """
+    show for user all his photos
+    :param request:
+    :return:
+    """
     if request.user.is_authenticated:
         photos = Photo.objects.all()
         context = {}
         for photo in photos:
             if photo.user == request.user:
                 context['photo'] = photo
-        if 'photo' in context:
-            return render(request, 'photos/gallery.html', context)
-    return redirect('home')
+        if not context:
+            return redirect('home')
+    return render(request, 'photos/gallery.html', context)
+
 
 
 def view_photo(request, pk):
+    """
+    show for user photo defined by pk
+    :param request:
+    :param pk:
+    :return:
+    """
     if request.user.is_authenticated:
         photo = Photo.objects.get(id=pk)
         if photo.user == request.user:
@@ -25,6 +41,11 @@ def view_photo(request, pk):
 
 
 def add_photo(request):
+    """
+    add photo for user
+    :param request:
+    :return:
+    """
     if request.user.is_authenticated:
         if request.method == 'POST':
             user = request.user
@@ -41,6 +62,12 @@ def add_photo(request):
 
 
 def change_photos_name(request, pk):
+    """
+    change name in defined by pk photo of user
+    :param request:
+    :param pk:
+    :return:
+    """
     if request.user.is_authenticated:
         photo = Photo.objects.get(id=pk)
         if photo.user == request.user:
