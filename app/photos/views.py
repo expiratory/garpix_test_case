@@ -1,7 +1,7 @@
 """
 ViewSet for photos
 """
-
+from django.conf import settings
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -19,63 +19,82 @@ class PhotosViewSet(GenericViewSet):
     @action(methods=['get'], detail=False)
     def gallery(self, request):
         """
-        if success it makes json with qs of user's photos
-        :param request:
-        :return Response:
+        user's gallery
+        :param request: method GET
+        :return Response: json that includes queryset of user's photos
         """
         gallery = Photo.objects.filter(user=request.user).values()
-        if not gallery:
-            return Response({'message': 'error', 'description': 'photos not found'})
+        for photo in gallery:
+            photo['image'] = request.get_host() + settings.STATIC_URL + settings.MEDIA_URL[1:] + photo['image']
         return Response({'gallery': gallery})
 
     @action(methods=['get'], detail=True)
     def photo(self, request, pk):
         """
-        if success it makes json with photo defined by pk
-        :param request:
-        :param pk:
-        :return Response:
+        show user his photo defined by pk
+        :param request: method GET
+        :param pk: primary key - photo.id
+        :return Response: if success defined photo json representation
+                          else {'message': 'fail', 'description': 'permission denied'}
         """
-        photo = Photo.objects.get(pk=pk)
-        if photo.user != request.user:
-            return Response({'message': 'error', 'description': 'access denied'})
-        photo.count_of_views += 1
-        photo.save()
-        return Response({'photo': PhotoSerializer(photo).data})
+        try:
+            photo = Photo.objects.get(pk=pk)
+            if photo.user != request.user:
+                return Response({'message': 'fail', 'description': 'permission denied'})
+            photo.count_of_views += 1
+            photo.save()
+            photo['image'] = request.get_host() + settings.STATIC_URL + settings.MEDIA_URL[1:] + photo['image']
+            return Response({'photo': PhotoSerializer(photo).data})
+        except Photo.DoesNotExist as e:
+            return Response({'message': 'fail', 'description': str(e)})
 
     @action(methods=['post'], detail=True)
     def change_photo_title(self, request, pk):
         """
-        allows user to change title of the photo defined by pk
-        and response with json with result in case of success
-        :param request:
-        :param pk:
-        :return Response:
+        allows user to change title of his photo defined by pk
+        :param request: method POST: dict = {'title': 'value'}
+        :param pk: primary key - photo.id
+        :return Response: if success defined photo json representation with new title
+                          else {'message': 'fail', 'description': 'permission denied'}
         """
-        photo = Photo.objects.get(pk=pk)
-        if photo.user != request.user:
-            return Response({'message': 'error', 'description': 'permission denied'})
-        data = request.POST
-        photo.title = data['title']
-        photo.save()
-        return Response({'photo': PhotoSerializer(photo).data})
+        try:
+            photo = Photo.objects.get(pk=pk)
+            if photo.user != request.user:
+                return Response({'message': 'fail', 'description': 'permission denied'})
+            data = request.POST
+            photo.title = data['title']
+            photo.save()
+            photo['image'] = request.get_host() + settings.STATIC_URL + settings.MEDIA_URL[1:] + photo['image']
+            return Response({'photo': PhotoSerializer(photo).data})
+        except Photo.DoesNotExist as e:
+            return Response({'message': 'fail', 'description': str(e)})
+        except KeyError as e:
+            return Response({'message': 'fail', 'description': str(e)})
 
     @action(methods=['post'], detail=False)
     def add_photo(self, request):
         """
-        allows user to add photo and response
-        with json with result in case of success
-        :param request:
-        :return Response:
+        allows user to add photo
+        :param request: method POST: image file, dict = {'title': 'value'
+                                                         'description': 'value'}
+        :return Response: added photo json representation
         """
-        data = request.POST
-        image = request.FILES.get('image')
-        user = request.user
-        photo = Photo.objects.create(
-            title=data['title'],
-            description=data['description'],
-            image=image,
-            user=user)
-        if not photo:
-            return Response({'message': 'fail', 'description': 'photo was not added'})
-        return Response({'message': 'success', 'description': 'photo was added'})
+        try:
+            data = request.POST
+            image = request.FILES.get('image')
+            user = request.user
+            photo = Photo.objects.create(
+                title=data['title'],
+                description=data['description'],
+                image=image,
+                user=user)
+            photo['image'] = request.get_host() + settings.STATIC_URL + settings.MEDIA_URL[1:] + photo['image']
+            return Response({'photo': PhotoSerializer(photo).data})
+        except KeyError as e:
+            return Response({'message': 'fail', 'description': str(e)})
+        except ValueError as e:
+            return Response({'message': 'fail', 'description': str(e)})
+        except TypeError as e:
+            return Response({'message': 'fail', 'description': str(e)})
+        except Exception as e:
+            return Response({'message': 'fail', 'description': str(e)})

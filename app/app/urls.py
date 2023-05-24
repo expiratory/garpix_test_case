@@ -17,18 +17,18 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import path, include
 from .yasg import urlpatterns as doc_urls
 from rest_framework import routers
-import photos.views as views
+from photos.views import PhotosViewSet
 
 router = routers.SimpleRouter()
-router.register(r'photos', views.PhotosViewSet)
+router.register(r'photos', PhotosViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/auth/', include('djoser.urls')),
-    re_path(r'^auth/', include('djoser.urls.authtoken')),
+    path('api/v1/', include('djoser.urls')),
+    path('api/v1/', include('djoser.urls.authtoken')),
     path('api/v1/', include(router.urls)),
 ]
 

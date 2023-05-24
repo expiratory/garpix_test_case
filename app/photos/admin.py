@@ -1,5 +1,5 @@
 """
-register app here
+register model here
 """
 
 from django.contrib import admin
