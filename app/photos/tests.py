@@ -1,26 +1,27 @@
 """
     tests for photos app
 """
-
+from datetime import datetime
+from unittest import TestCase
+import django
 from django.conf import settings
-
+from django.contrib.auth.models import User
+import pytest
+from rest_framework.test import APIClient
+from .models import Photo
+from .serializers import PhotoSerializer
+from .views import PhotosViewSet
 
 settings.configure()
 
-import django
-
 django.setup()
 
-from datetime import datetime
-import pytest
-from rest_framework.test import APIClient
-from django.contrib.auth.models import User
-from photos.models import Photo
-from photos.serializers import PhotoSerializer
-from photos.views import PhotosViewSet
 
+class TestPhotosViewSet(TestCase):
+    """
+    Tests for PhotosViewSet class
+    """
 
-class TestPhotosViewSet:
     def test_user_gallery_view(self, rf, user):
         """
         Test that a user can view their gallery
@@ -234,11 +235,15 @@ class TestPhotosViewSet:
         assert 'the submitted data was not a file' in response.data['description']
 
 
-class TestPhoto:
+class TestPhoto(TestCase):
     """
-    Tests that photo can be created with all fields
+    Tests for Photo model
     """
+
     def test_create_photo_with_all_fields(self, mocker):
+        """
+        Tests that photo can be created with all fields
+        """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
         photo = Photo.objects.create(title='Test Photo',
@@ -311,7 +316,11 @@ class TestPhoto:
                                  image='test.jpg')
 
 
-class TestPhotoSerializer:
+class TestPhotoSerializer(TestCase):
+    """
+    Tests for PhotoSerializer class
+    """
+
     def test_serializer_serializes_photo(self):
         """
         Tests that the PhotoSerializer correctly serializes a Photo model.
