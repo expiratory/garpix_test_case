@@ -1,9 +1,7 @@
-main venv packages used for this project:
-
-django	4.2.1
-djangorestframework	3.14.0
-djoser	2.2.0
-drf-yasg	1.21.5
-pillow 9.5.0
-pytest 7.3.1
-coverage 7.2.6
+django
+djangorestframework
+djoser
+drf-yasg
+pillow
+pytest-mock
+coverage
