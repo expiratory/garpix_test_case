@@ -3,8 +3,6 @@
 """
 from datetime import datetime
 from unittest import TestCase
-import django
-from django.conf import settings
 from django.contrib.auth.models import User
 import pytest
 from rest_framework.test import APIClient
@@ -12,99 +10,100 @@ from .models import Photo
 from .serializers import PhotoSerializer
 from .views import PhotosViewSet
 
-settings.configure()
-
-django.setup()
-
 
 class TestPhotosViewSet(TestCase):
     """
     Tests for PhotosViewSet class
     """
 
-    def test_user_gallery_view(self, request):
+    def test_user_gallery_view(self):
         """
         Test that a user can view their gallery
         """
-        user = User.objects.create(username='testuser', password='testPW123')
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
         Photo.objects.create(title="Test Photo 1", image="test1.jpg", user=user)
         Photo.objects.create(title="Test Photo 2", image="test2.jpg", user=user)
 
-        request.user = user
-
-        response = PhotosViewSet.as_view({'get': 'gallery'})(request.get('/photos/gallery/'))
+        response = PhotosViewSet.as_view({'get': 'gallery'})(client.get('/photos/gallery/'))
 
         assert response.status_code == 200
         assert len(response.data['gallery']) == 2
         assert response.data['gallery'][0]['title'] == "Test Photo 1"
         assert response.data['gallery'][1]['title'] == "Test Photo 2"
 
-    def test_view_specific_photo(self, request):
+    def test_view_specific_photo(self):
         """
         Test that a user can view a specific photo
         """
-        user = User.objects.create(username='testuser', password='testPW123')
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
         photo = Photo.objects.create(title="Test Photo", image="test.jpg", user=user)
 
-        request.user = user
-
-        response = PhotosViewSet.as_view({'get': 'photo'})(request.get(f'/photos/{photo.pk}/'), pk=photo.pk)
+        response = PhotosViewSet.as_view({'get': 'photo'}) \
+            (client.get(f'/photos/{photo.pk}/'), pk=photo.pk)
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "Test Photo"
         assert response.data['photo']['count_of_views'] == 1
 
-    def test_view_nonexistent_photo(self, request):
+    def test_view_nonexistent_photo(self):
         """
         Test that a user cannot view a photo that doesn't exist
         """
-        user = User.objects.create(username='testuser', password='testPW123')
-        request.user = user
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
 
-        response = PhotosViewSet.as_view({'get': 'photo'})(request.get('/photos/999/'), pk=999)
+        response = PhotosViewSet.as_view({'get': 'photo'})(client.get('/photos/999/'), pk=999)
 
         assert response.status_code == 404
         assert response.data['message'] == "fail"
         assert response.data['description'] == "Photo matching query does not exist."
 
-    def test_change_nonexistent_photo_title(self, request):
+    def test_change_nonexistent_photo_title(self):
         """
         Test that a user cannot change the title of a photo that doesn't exist
         """
-        user = User.objects.create(username='testuser', password='testPW123')
-        request.user = user
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
 
-        response = PhotosViewSet.as_view({'post': 'change_photo_title'})\
-            (request.post('/photos/999/change_title/', data={'title': 'New Title'}), pk=999)
+        response = PhotosViewSet.as_view({'post': 'change_photo_title'}) \
+            (client.post('/photos/999/change_title/', {'title': 'New Title'}), pk=999)
 
         assert response.status_code == 404
         assert response.data['message'] == "fail"
         assert response.data['description'] == "Photo matching query does not exist."
 
-    def test_change_photo_title(self, request):
+    def test_change_photo_title(self):
         """
         Test that a user can change the title of their photo
         """
-        user = User.objects.create(username='testuser', password='testPW123')
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
         photo = Photo.objects.create(title="Test Photo", image="test.jpg", user=user)
 
-        request.user = user
-
-        response = PhotosViewSet.as_view({'post': 'change_photo_title'})\
-            (request.post(f'/photos/{photo.pk}/change_title/', data={'title': 'New Title'}), pk=photo.pk)
+        response = PhotosViewSet.as_view({'post': 'change_photo_title'}) \
+            (client.post(f'/photos/{photo.pk}/change_title/',
+                          {'title': 'New Title'}), pk=photo.pk)
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "New Title"
 
-    def test_add_photo_to_gallery(self, request):
+    def test_add_photo_to_gallery(self):
         """
         Test that a user can add a photo to their gallery
         """
-        user = User.objects.create(username='testuser', password='testPW123')
-        request.user = user
+        client = APIClient()
+        user = User.objects.create_user(username='testuser', password='testpass')
+        client.force_authenticate(user=user)
 
-        response = PhotosViewSet.as_view({'post': 'add_photo'})\
-            (request.post('/photos/add/', data={'title': 'New Photo', 'image': 'test.jpg'}))
+        response = PhotosViewSet.as_view({'post': 'add_photo'}) \
+            (client.post('/photos/add/', {'title': 'New Photo', 'image': 'test.jpg'}))
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "New Photo"
@@ -151,7 +150,7 @@ class TestPhotosViewSet(TestCase):
         """
         Tests that image URLs are properly constructed for each photo.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         Photo.objects.create(title='Test Photo 1', image='test1.jpg', user=user)
         Photo.objects.create(title='Test Photo 2', image='test2.jpg', user=user)
 
@@ -168,8 +167,8 @@ class TestPhotosViewSet(TestCase):
         """
         Tests authentication and authorization for each endpoint.
         """
-        user1 = User.objects.create(username='testuser1')
-        user2 = User.objects.create(username='testuser2')
+        user1 = User.objects.create(username='testuser1', password='testpass')
+        user2 = User.objects.create(username='testuser2', password='testpass')
         photo1 = Photo.objects.create(title='Test Photo 1', image='test1.jpg', user=user1)
         photo2 = Photo.objects.create(title='Test Photo 2', image='test2.jpg', user=user1)
 
@@ -209,7 +208,7 @@ class TestPhotosViewSet(TestCase):
         """
         Tests error handling for unexpected exceptions.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         client = APIClient()
         client.force_authenticate(user=user)
 
@@ -243,12 +242,11 @@ class TestPhoto(TestCase):
     Tests for Photo model
     """
 
-    def test_create_photo_with_all_fields(self, mocker):
+    def test_create_photo_with_all_fields(self):
         """
         Tests that photo can be created with all fields
         """
-        user = User.objects.create(username='testuser')
-        mocker.patch('django.contrib.auth.models.User', return_value=user)
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='Test Photo',
                                      description='Test Description',
                                      image='test.jpg', user=user)
@@ -258,12 +256,11 @@ class TestPhoto(TestCase):
         assert photo.image == 'test.jpg'
         assert photo.user == user
 
-    def test_update_photo_title_and_description(self, mocker):
+    def test_update_photo_title_and_description(self):
         """
         Test that title and description of photo can be changed
         """
-        user = User.objects.create(username='testuser')
-        mocker.patch('django.contrib.auth.models.User', return_value=user)
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='Test Photo',
                                      description='Test Description',
                                      image='test.jpg',
@@ -275,33 +272,30 @@ class TestPhoto(TestCase):
         assert updated_photo.title == 'Updated Title'
         assert updated_photo.description == 'Updated Description'
 
-    def test_upload_image_exceeds_max_size(self, mocker):
+    def test_upload_image_exceeds_max_size(self):
         """
         Tests when upload image exceeds maximum size
         """
-        user = User.objects.create(username='testuser')
-        mocker.patch('django.contrib.auth.models.User', return_value=user)
+        user = User.objects.create(username='testuser', password='testpass')
         with pytest.raises(ValueError):
             Photo.objects.create(title='Test Photo',
                                  description='Test Description',
                                  image='large_image.jpg',
                                  user=user)
 
-    def test_create_photo_blank_title_or_description(self, mocker):
+    def test_create_photo_blank_title_or_description(self):
         """
         Tests that photo could not be created without title
         """
-        user = User.objects.create(username='testuser')
-        mocker.patch('django.contrib.auth.models.User', return_value=user)
+        user = User.objects.create(username='testuser', password='testpass')
         with pytest.raises(ValueError):
             Photo.objects.create(title='', description='', image='test.jpg', user=user)
 
-    def test_retrieve_photo_views_and_date(self, mocker):
+    def test_retrieve_photo_views_and_date(self):
         """
         Tests that count of views is 0 by default and date of creation is note None
         """
-        user = User.objects.create(username='testuser')
-        mocker.patch('django.contrib.auth.models.User', return_value=user)
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='Test Photo',
                                      description='Test Description',
                                      image='test.jpg',
@@ -328,7 +322,7 @@ class TestPhotoSerializer(TestCase):
         """
         Tests that the PhotoSerializer correctly serializes a Photo model.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='test title',
                                      description='test description',
                                      image='test.jpg',
@@ -351,7 +345,7 @@ class TestPhotoSerializer(TestCase):
         """
         Tests that all fields of the Photo model are present in the serialized output.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='test title',
                                      description='test description',
                                      image='test.jpg',
@@ -369,7 +363,7 @@ class TestPhotoSerializer(TestCase):
         Tests edge cases where the image, title,
         or description fields are missing from the Photo model.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(image='test.jpg', user=user)
         serializer = PhotoSerializer(photo)
         expected_data = {
@@ -389,7 +383,7 @@ class TestPhotoSerializer(TestCase):
         """
         Tests edge case where the count_of_views field is negative.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='test title',
                                      description='test description',
                                      image='test.jpg',
@@ -413,7 +407,7 @@ class TestPhotoSerializer(TestCase):
         """
         Tests that the user field is correctly serialized as a nested object.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         photo = Photo.objects.create(title='test title',
                                      description='test description',
                                      image='test.jpg',
@@ -436,7 +430,7 @@ class TestPhotoSerializer(TestCase):
         """
         Tests edge case where the date_of_creation field is in the future.
         """
-        user = User.objects.create(username='testuser')
+        user = User.objects.create(username='testuser', password='testpass')
         future_date = datetime.date.today() + datetime.timedelta(days=1)
         photo = Photo.objects.create(title='test title',
                                      description='test description',
