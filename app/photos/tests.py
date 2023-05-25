@@ -22,86 +22,89 @@ class TestPhotosViewSet(TestCase):
     Tests for PhotosViewSet class
     """
 
-    def test_user_gallery_view(self, rf, user):
+    def test_user_gallery_view(self, request):
         """
         Test that a user can view their gallery
         """
+        user = User.objects.create(username='testuser', password='testPW123')
         Photo.objects.create(title="Test Photo 1", image="test1.jpg", user=user)
         Photo.objects.create(title="Test Photo 2", image="test2.jpg", user=user)
 
-        request = rf.get('/photos/gallery/')
         request.user = user
 
-        response = PhotosViewSet.as_view({'get': 'gallery'})(request)
+        response = PhotosViewSet.as_view({'get': 'gallery'})(request.get('/photos/gallery/'))
 
         assert response.status_code == 200
         assert len(response.data['gallery']) == 2
         assert response.data['gallery'][0]['title'] == "Test Photo 1"
         assert response.data['gallery'][1]['title'] == "Test Photo 2"
 
-    def test_view_specific_photo(self, rf, user):
+    def test_view_specific_photo(self, request):
         """
         Test that a user can view a specific photo
         """
+        user = User.objects.create(username='testuser', password='testPW123')
         photo = Photo.objects.create(title="Test Photo", image="test.jpg", user=user)
 
-        request = rf.get(f'/photos/{photo.pk}/')
         request.user = user
 
-        response = PhotosViewSet.as_view({'get': 'photo'})(request, pk=photo.pk)
+        response = PhotosViewSet.as_view({'get': 'photo'})(request.get(f'/photos/{photo.pk}/'), pk=photo.pk)
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "Test Photo"
         assert response.data['photo']['count_of_views'] == 1
 
-    def test_view_nonexistent_photo(self, rf, user):
+    def test_view_nonexistent_photo(self, request):
         """
         Test that a user cannot view a photo that doesn't exist
         """
-        request = rf.get('/photos/999/')
+        user = User.objects.create(username='testuser', password='testPW123')
         request.user = user
 
-        response = PhotosViewSet.as_view({'get': 'photo'})(request, pk=999)
+        response = PhotosViewSet.as_view({'get': 'photo'})(request.get('/photos/999/'), pk=999)
 
         assert response.status_code == 404
         assert response.data['message'] == "fail"
         assert response.data['description'] == "Photo matching query does not exist."
 
-    def test_change_nonexistent_photo_title(self, rf, user):
+    def test_change_nonexistent_photo_title(self, request):
         """
         Test that a user cannot change the title of a photo that doesn't exist
         """
-        request = rf.post('/photos/999/change_title/', data={'title': 'New Title'})
+        user = User.objects.create(username='testuser', password='testPW123')
         request.user = user
 
-        response = PhotosViewSet.as_view({'post': 'change_photo_title'})(request, pk=999)
+        response = PhotosViewSet.as_view({'post': 'change_photo_title'})\
+            (request.post('/photos/999/change_title/', data={'title': 'New Title'}), pk=999)
 
         assert response.status_code == 404
         assert response.data['message'] == "fail"
         assert response.data['description'] == "Photo matching query does not exist."
 
-    def test_change_photo_title(self, rf, user):
+    def test_change_photo_title(self, request):
         """
         Test that a user can change the title of their photo
         """
+        user = User.objects.create(username='testuser', password='testPW123')
         photo = Photo.objects.create(title="Test Photo", image="test.jpg", user=user)
 
-        request = rf.post(f'/photos/{photo.pk}/change_title/', data={'title': 'New Title'})
         request.user = user
 
-        response = PhotosViewSet.as_view({'post': 'change_photo_title'})(request, pk=photo.pk)
+        response = PhotosViewSet.as_view({'post': 'change_photo_title'})\
+            (request.post(f'/photos/{photo.pk}/change_title/', data={'title': 'New Title'}), pk=photo.pk)
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "New Title"
 
-    def test_add_photo_to_gallery(self, rf, user):
+    def test_add_photo_to_gallery(self, request):
         """
         Test that a user can add a photo to their gallery
         """
-        request = rf.post('/photos/add/', data={'title': 'New Photo', 'image': 'test.jpg'})
+        user = User.objects.create(username='testuser', password='testPW123')
         request.user = user
 
-        response = PhotosViewSet.as_view({'post': 'add_photo'})(request)
+        response = PhotosViewSet.as_view({'post': 'add_photo'})\
+            (request.post('/photos/add/', data={'title': 'New Photo', 'image': 'test.jpg'}))
 
         assert response.status_code == 200
         assert response.data['photo']['title'] == "New Photo"
@@ -257,7 +260,7 @@ class TestPhoto(TestCase):
 
     def test_update_photo_title_and_description(self, mocker):
         """
-        Test that photo.title and photo.description can be changed
+        Test that title and description of photo can be changed
         """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
