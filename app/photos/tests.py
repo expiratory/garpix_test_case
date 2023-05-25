@@ -2,14 +2,22 @@
     tests for photos app
 """
 
+from django.conf import settings
+
+
+settings.configure()
+
+import django
+
+django.setup()
 
 from datetime import datetime
 import pytest
 from rest_framework.test import APIClient
 from django.contrib.auth.models import User
-from .models import Photo
-from .serializers import PhotoSerializer
-from .views import PhotosViewSet
+from photos.models import Photo
+from photos.serializers import PhotoSerializer
+from photos.views import PhotosViewSet
 
 
 class TestPhotosViewSet:
@@ -147,9 +155,9 @@ class TestPhotosViewSet:
         client.force_authenticate(user=user)
         response = client.get('/photos/gallery/')
         assert response.status_code == 200
-        assert response.data['gallery'][0]['image'] ==\
+        assert response.data['gallery'][0]['image'] == \
                'http://127.0.0.1:8000/static/media/test1.jpg'
-        assert response.data['gallery'][1]['image'] ==\
+        assert response.data['gallery'][1]['image'] == \
                'http://127.0.0.1:8000/static/media/test2.jpg'
 
     def test_authentication_and_authorization(self):
@@ -227,6 +235,9 @@ class TestPhotosViewSet:
 
 
 class TestPhoto:
+    """
+    Tests that photo can be created with all fields
+    """
     def test_create_photo_with_all_fields(self, mocker):
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
@@ -240,6 +251,9 @@ class TestPhoto:
         assert photo.user == user
 
     def test_update_photo_title_and_description(self, mocker):
+        """
+        Test that photo.title and photo.description can be changed
+        """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
         photo = Photo.objects.create(title='Test Photo',
@@ -254,6 +268,9 @@ class TestPhoto:
         assert updated_photo.description == 'Updated Description'
 
     def test_upload_image_exceeds_max_size(self, mocker):
+        """
+        Tests when upload image exceeds maximum size
+        """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
         with pytest.raises(ValueError):
@@ -263,12 +280,18 @@ class TestPhoto:
                                  user=user)
 
     def test_create_photo_blank_title_or_description(self, mocker):
+        """
+        Tests that photo could not be created without title
+        """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
         with pytest.raises(ValueError):
             Photo.objects.create(title='', description='', image='test.jpg', user=user)
 
     def test_retrieve_photo_views_and_date(self, mocker):
+        """
+        Tests that count of views is 0 by default and date of creation is note None
+        """
         user = User.objects.create(username='testuser')
         mocker.patch('django.contrib.auth.models.User', return_value=user)
         photo = Photo.objects.create(title='Test Photo',
@@ -279,6 +302,9 @@ class TestPhoto:
         assert photo.date_of_creation is not None
 
     def test_create_photo_without_user(self):
+        """
+        Tests that photo can not be created without user
+        """
         with pytest.raises(ValueError):
             Photo.objects.create(title='Test Photo',
                                  description='Test Description',
